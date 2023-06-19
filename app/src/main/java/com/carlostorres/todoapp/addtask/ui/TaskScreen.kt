@@ -20,36 +20,36 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 
-@Preview
 @Composable
-fun TaskScreen() {
+fun TaskScreen(taskViewModel: TaskViewModel) {
+
+    val showDialog: Boolean by taskViewModel.showDialog.observeAsState(initial = false)
  
     Box(modifier = Modifier.fillMaxSize() ){
         AddTaskDialog(
-            show = true,
-            onDismiss =  {},
-            onTaskAdded = {}
+            show = showDialog,
+            onDismiss =  {taskViewModel.dialogClose()},
+            onTaskAdded = {taskViewModel.onTaskCreated(it)}
         )
-        FabDialog(Modifier.align(Alignment.BottomEnd))
+        FabDialog(Modifier.align(Alignment.BottomEnd), taskViewModel)
     }
     
 }
 
 @Composable
-fun FabDialog(modifier : Modifier) {
+fun FabDialog(modifier: Modifier, taskViewModel: TaskViewModel) {
     FloatingActionButton(
         onClick = {
-
+            taskViewModel.onShowDialogClick()
         },
         modifier = modifier.padding(16.dp)
     ) {
@@ -68,7 +68,11 @@ fun AddTaskDialog(show: Boolean, onDismiss:()-> Unit, onTaskAdded: (String)-> Un
             onDismissRequest = { onDismiss() }
         ) {
 
-            Column(Modifier.fillMaxWidth().background(Color.White).padding(16.dp)) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(16.dp)) {
                 Text(
                     text = "Añade tu tarea",
                     fontSize = 18.sp,
