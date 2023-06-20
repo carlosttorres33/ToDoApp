@@ -1,14 +1,11 @@
 package com.carlostorres.todoapp.addtask.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,11 +15,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CardElevation
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -37,40 +33,60 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.carlostorres.todoapp.addtask.ui.model.TaskModdel
 
 @Composable
 fun TaskScreen(taskViewModel: TaskViewModel) {
 
     val showDialog: Boolean by taskViewModel.showDialog.observeAsState(initial = false)
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        AddTaskDialog(
-            show = showDialog,
-            onDismiss = { taskViewModel.dialogClose() },
-            onTaskAdded = { taskViewModel.onTaskCreated(it) }
-        )
-        FabDialog(Modifier.align(Alignment.BottomEnd), taskViewModel)
-        TasksList(taskViewModel)
+    val uiState by produceState<TasksUIState>(
+        initialValue = TasksUIState.Loading,
+        key1 = lifecycle,
+        key2 = taskViewModel
+    ){
+        lifecycle.repeatOnLifecycle(state = Lifecycle.State.STARTED){
+            taskViewModel.uiState.collect{value = it}
+        }
+    }
+
+    when(uiState){
+        is TasksUIState.Error -> {
+
+        }
+        TasksUIState.Loading -> {
+            CircularProgressIndicator()
+        }
+        is TasksUIState.Success -> {
+            Box(modifier = Modifier.fillMaxSize()) {
+                AddTaskDialog(
+                    show = showDialog,
+                    onDismiss = { taskViewModel.dialogClose() },
+                    onTaskAdded = { taskViewModel.onTaskCreated(it) }
+                )
+                FabDialog(Modifier.align(Alignment.BottomEnd), taskViewModel)
+                TasksList((uiState as TasksUIState.Success).tasks, taskViewModel)
+            }
+        }
     }
 
 }
 
 @Composable
-fun TasksList(taskViewModel: TaskViewModel) {
-
-    val myTasks: List<TaskModdel> = taskViewModel.tasks
+fun TasksList(tasks: List<TaskModdel>, taskViewModel: TaskViewModel) {
 
     LazyColumn {
 
-        items(myTasks, key = { it.id }) { task ->
+        items(tasks, key = { it.id }) { task ->
             ItemTask(
                 taskModel = task,
                 taskViewModel = taskViewModel
@@ -90,7 +106,7 @@ fun ItemTask(taskModel: TaskModdel, taskViewModel: TaskViewModel) {
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = {
-                       taskViewModel.onItemRemove(taskModel)
+                        taskViewModel.onItemRemove(taskModel)
                     }
                 )
             },

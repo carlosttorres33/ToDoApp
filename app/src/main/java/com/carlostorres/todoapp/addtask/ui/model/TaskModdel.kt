@@ -1,9 +1,7 @@
 package com.carlostorres.todoapp.addtask.ui.model
 
-import java.util.UUID
-
 data class TaskModdel(
-    val id: Long = System.currentTimeMillis(),
+    val id: Int = System.currentTimeMillis().hashCode(),
     val task: String,
     var selected: Boolean = false
 )
